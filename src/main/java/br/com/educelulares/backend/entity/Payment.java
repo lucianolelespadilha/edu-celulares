@@ -16,7 +16,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class Payment {
 
-    @Id @GeneratedValue
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @OneToOne
@@ -24,7 +25,6 @@ public class Payment {
     private Order order;
 
     private BigDecimal amount;
-    private String status;//ex:"PAID", "PENDING", "FAILED"
+    private String status; // "PAID", "PENDING", "FAILED"
     private LocalDateTime paidAt;
-
 }
