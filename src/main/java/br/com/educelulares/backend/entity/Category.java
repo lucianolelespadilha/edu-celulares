@@ -23,6 +23,7 @@ public class Category {
     @GeneratedValue
     private Long id;
     private String name;
+    private String description;
 
     @OneToMany(mappedBy = "category")
     @JsonManagedReference("category-product")

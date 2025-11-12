@@ -1,7 +1,10 @@
 package br.com.educelulares.backend.controller;
 
+import br.com.educelulares.backend.dto.CategoryCreateDto;
+import br.com.educelulares.backend.dto.CategoryDto;
 import br.com.educelulares.backend.entity.Category;
 import br.com.educelulares.backend.repository.CategoryRepository;
+import br.com.educelulares.backend.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,82 +27,47 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class CategoryController {
 
-    // INJEÇÃO AUTOMÁTICA DO REPOSITÓRIO DE CATEGORIAS
-    private final CategoryRepository repository;
+    // INJEÇÃO AUTOMÁTICA DO SERVICE DE CATEGORIA
+    private final CategoryService categoryService;
 
     // ---------------------------------------------------------------------
-    // LISTA TODAS AS CATEGORIAS
+    // RETORNA TODAS AS CATEGORIAS CADASTRADAS
     // ---------------------------------------------------------------------
     @GetMapping
-    public ResponseEntity<List<Category>> getAll() {
-        // BUSCA TODAS AS CATEGORIAS CADASTRADAS NO BANCO
-        List<Category> categories = repository.findAll();
-
-        // RETORNA HTTP 200 (OK) COM A LISTA DE CATEGORIAS
-        return ResponseEntity.ok(categories);
+    public ResponseEntity<List<CategoryDto>> findAll() {
+        return ResponseEntity.ok(categoryService.findAll());
     }
 
     // ---------------------------------------------------------------------
-    // BUSCA UMA CATEGORIA PELO ID
+    // RETORNA UMA CATEGORIA ESPECÍFICA PELO ID
     // ---------------------------------------------------------------------
     @GetMapping("/{id}")
-    public ResponseEntity<Category> getById(@PathVariable Long id) {
-        // PROCURA A CATEGORIA PELO ID INFORMADO
-        Optional<Category> category = repository.findById(id);
-
-        // RETORNA 200 SE ENCONTRAR OU 404 SE NÃO EXISTIR
-        return category.map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
+    public ResponseEntity<CategoryDto> findById(@PathVariable Long id) {
+        return ResponseEntity.ok(categoryService.findById(id));
     }
 
     // ---------------------------------------------------------------------
-    // CADASTRA UMA NOVA CATEGORIA
+    // CRIA UMA NOVA CATEGORIA
     // ---------------------------------------------------------------------
     @PostMapping(consumes = "application/json", produces = "application/json")
-    public ResponseEntity<Category> create(@RequestBody Category category) {
-        // SALVA A NOVA CATEGORIA NO BANCO
-        Category saved = repository.save(category);
-
-        // RETORNA HTTP 201 (CREATED) COM A CATEGORIA SALVA
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+    public ResponseEntity<CategoryDto> createCategory(@RequestBody CategoryCreateDto categoryDto) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.createCategory(categoryDto));
     }
 
     // ---------------------------------------------------------------------
     // ATUALIZA UMA CATEGORIA EXISTENTE PELO ID
     // ---------------------------------------------------------------------
     @PutMapping("/{id}")
-    public ResponseEntity<Category> update(@PathVariable Long id, @RequestBody Category category) {
-        // VERIFICA SE A CATEGORIA EXISTE NO BANCO
-        if (!repository.existsById(id)) {
-            // SE NÃO EXISTIR, RETORNA 404
-            return ResponseEntity.notFound().build();
-        }
-
-        // DEFINE O ID PARA GARANTIR QUE SERÁ ATUALIZADA A CATEGORIA CORRETA
-        category.setId(id);
-
-        // SALVA AS ALTERAÇÕES NO BANCO
-        Category updated = repository.save(category);
-
-        // RETORNA 200 (OK) COM A CATEGORIA ATUALIZADA
-        return ResponseEntity.ok(updated);
+    public ResponseEntity<CategoryDto> updateCategory(@PathVariable Long id, @RequestBody CategoryCreateDto categoryDto) {
+        return ResponseEntity.ok(categoryService.updateCategory(id, categoryDto));
     }
 
     // ---------------------------------------------------------------------
-    // DELETA UMA CATEGORIA PELO ID
+    // EXCLUI UMA CATEGORIA PELO ID
     // ---------------------------------------------------------------------
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        // VERIFICA SE A CATEGORIA EXISTE
-        if (!repository.existsById(id)) {
-            // SE NÃO EXISTIR, RETORNA 404
-            return ResponseEntity.notFound().build();
-        }
-
-        // REMOVE A CATEGORIA DO BANCO
-        repository.deleteById(id);
-
-        // RETORNA 204 (NO CONTENT) INDICANDO SUCESSO NA EXCLUSÃO
+    public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 }
