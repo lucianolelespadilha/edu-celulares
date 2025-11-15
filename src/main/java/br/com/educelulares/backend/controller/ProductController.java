@@ -1,108 +1,89 @@
 package br.com.educelulares.backend.controller;
 
 
-import br.com.educelulares.backend.entity.Order;
-import br.com.educelulares.backend.entity.OrderItem;
-import br.com.educelulares.backend.entity.Product;
-import br.com.educelulares.backend.repository.OrderItemRepository;
-import br.com.educelulares.backend.repository.OrderRepository;
-import br.com.educelulares.backend.repository.ProductRepository;
+import br.com.educelulares.backend.dto.ProductCreateDto;
+import br.com.educelulares.backend.dto.ProductDto;
+import br.com.educelulares.backend.service.OrderItemService;
+import br.com.educelulares.backend.service.OrderService;
+import br.com.educelulares.backend.service.ProductService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/products")
 @RequiredArgsConstructor
 public class ProductController {
 
-    // INJEÇÃO AUTOMÁTICA DOS REPOSITÓRIOS
-    private final OrderItemRepository orderItemRepository;
-    private final OrderRepository orderRepository;
-    private final ProductRepository productRepository;
+    // -------------------------------------------------------------------------
+    // INJEÇÃO DOS SERVIÇOS NECESSÁRIOS PARA OPERAR PRODUTOS
+    // -------------------------------------------------------------------------
+    private final OrderService orderService;
+    private final OrderItemService orderItemService;
+    private final ProductService productService;
+
 
     // -------------------------------------------------------------------------
-    // RETORNA TODOS OS ITENS DE PEDIDO
-    // -------------------------------------------------------------------------
-    @GetMapping
-    public ResponseEntity<?> findAll() {
-        // RETORNA HTTP 200 (OK) COM A LISTA COMPLETA DE ITENS DE PEDIDO
-        return ResponseEntity.ok(orderItemRepository.findAll());
-    }
-
-    // -------------------------------------------------------------------------
-    // RETORNA UM ITEM DE PEDIDO PELO ID
-    // -------------------------------------------------------------------------
-    @GetMapping("/{id}")
-    public ResponseEntity<OrderItem> findById(@PathVariable Long id) {
-        // PROCURA O ITEM PELO ID INFORMADO E RETORNA 200 SE ENCONTRAR OU 404 SE NÃO
-        return orderItemRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
-    // -------------------------------------------------------------------------
-    // CRIA UM NOVO ITEM DE PEDIDO
+    // CRIA UM NOVO PRODUTO
     // -------------------------------------------------------------------------
     @PostMapping
     @Transactional
-    public ResponseEntity<?> createOrderItem(@RequestBody OrderItem orderItem) {
+    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductCreateDto productCreateDto) {
+        // CRIA O PRODUTO BASEADO NO DTO RECEBIDO
+        ProductDto created = productService.createdProduct(productCreateDto);
 
-        // VALIDA SE O JSON POSSUI UM PEDIDO (ORDER) COM ID
-        if (orderItem.getOrder() == null || orderItem.getOrder().getId() == null) {
-            // SE NÃO TIVER, RETORNA ERRO 400 - REQUISIÇÃO INVÁLIDA
-            return ResponseEntity.badRequest().body("Order ID required!");
-        }
-
-        // VALIDA SE O JSON POSSUI UM PRODUTO (PRODUCT) COM ID
-        if (orderItem.getProduct() == null || orderItem.getProduct().getId() == null) {
-            // SE NÃO TIVER, RETORNA ERRO 400 - REQUISIÇÃO INVÁLIDA
-            return ResponseEntity.badRequest().body("Product ID required!");
-        }
-
-        // PROCURA O PEDIDO (ORDER) PELO ID INFORMADO
-        Optional<Order> orderOpt = orderRepository.findById(orderItem.getOrder().getId());
-        if (orderOpt.isEmpty()) {
-            // SE O PEDIDO NÃO EXISTIR, RETORNA 404 NOT FOUND
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Order not found!");
-        }
-
-        // PROCURA O PRODUTO (PRODUCT) PELO ID INFORMADO
-        Optional<Product> productOpt = productRepository.findById(orderItem.getProduct().getId());
-        if (productOpt.isEmpty()) {
-            // SE O PRODUTO NÃO EXISTIR, RETORNA 404 NOT FOUND
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Product not found!");
-        }
-
-        // RELACIONA CORRETAMENTE O ITEM COM O PEDIDO E O PRODUTO
-        orderItem.setOrder(orderOpt.get());
-        orderItem.setProduct(productOpt.get());
-
-        // SALVA O ITEM NO BANCO DE DADOS
-        OrderItem savedItem = orderItemRepository.save(orderItem);
-
-        // RETORNA 201 CREATED COM O ITEM SALVO
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedItem);
+        // RETORNA HTTP 201 (CREATED) COM O PRODUTO GERADO
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
     }
 
+
     // -------------------------------------------------------------------------
-    // DELETA UM ITEM DE PEDIDO PELO ID
+    // RETORNA TODOS OS PRODUTOS
+    // -------------------------------------------------------------------------
+    @GetMapping
+    public ResponseEntity<List<ProductDto>> findAllProducts() {
+        // RETORNA HTTP 200 (OK) COM A LISTA COMPLETA DE PRODUTOS
+        return ResponseEntity.ok(productService.findAllProducts());
+    }
+
+
+    // -------------------------------------------------------------------------
+    // RETORNA UM PRODUTO PELO ID
+    // -------------------------------------------------------------------------
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductDto> findById(@PathVariable Long id) {
+        // RETORNA 200 SE ENCONTRAR O PRODUTO OU EXCEÇÃO 404 SE NÃO EXISTIR
+        return ResponseEntity.ok(productService.findProductById(id));
+    }
+
+
+    // -------------------------------------------------------------------------
+    // ATUALIZA UM PRODUTO EXISTENTE PELO ID
+    // -------------------------------------------------------------------------
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable Long id,
+                                                    @RequestBody ProductCreateDto productCreateDto) {
+        // ATUALIZA O PRODUTO COM OS NOVOS DADOS
+        ProductDto updated = productService.updateProduct(productCreateDto, id);
+
+        // RETORNA HTTP 200 COM O PRODUTO ATUALIZADO
+        return ResponseEntity.ok(updated);
+    }
+
+
+    // -------------------------------------------------------------------------
+    // DELETA UM PRODUTO PELO ID
     // -------------------------------------------------------------------------
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteOrderItem(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteProduct(@PathVariable Long id) {
+        // REMOVE O PRODUTO DO BANCO DE DADOS
+        productService.deleteProductById(id);
 
-        // VERIFICA SE O ITEM EXISTE NO BANCO
-        if (!orderItemRepository.existsById(id)) {
-            // SE NÃO EXISTE, RETORNA 404 NOT FOUND
-            return ResponseEntity.notFound().build();
-        }
-
-        // SE EXISTE, DELETA O ITEM E RETORNA 204 NO CONTENT
-        orderItemRepository.deleteById(id);
+        // RETORNA HTTP 204 (NO CONTENT) SEM CORPO
         return ResponseEntity.noContent().build();
     }
 }
