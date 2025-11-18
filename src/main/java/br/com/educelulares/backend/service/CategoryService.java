@@ -3,8 +3,10 @@ package br.com.educelulares.backend.service;
 import br.com.educelulares.backend.dto.CategoryCreateDto;
 import br.com.educelulares.backend.dto.CategoryDto;
 import br.com.educelulares.backend.entity.Category;
+import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.NonTransientDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -35,14 +37,15 @@ public class CategoryService {
     // BUSCA UMA CATEGORIA PELO ID
     public CategoryDto findById(Long id) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found") {
+                });
         return new CategoryDto(category.getId(), category.getName(), category.getDescription());
     }
 
     // ATUALIZA UMA CATEGORIA EXISTENTE PELO ID
     public CategoryDto updateCategory(Long id, CategoryCreateDto categoryCreateDto) {
         Category category = categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found"));
+                .orElseThrow(() -> new NotFoundException("Category not found"));
         category.setName(categoryCreateDto.name());
         category.setDescription(categoryCreateDto.description());
         Category updatedCategory = categoryRepository.save(category);
@@ -52,7 +55,7 @@ public class CategoryService {
     // EXCLUI UMA CATEGORIA PELO ID
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found");
+            throw new NotFoundException("Category not found");
         }
         categoryRepository.deleteById(id);
     }

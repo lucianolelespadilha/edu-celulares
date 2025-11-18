@@ -4,11 +4,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
 // -----------------------------------------------------------------------------
-// EXCEÇÃO DE REGRA DE NEGÓCIO (BusinessException)
-// LANÇADA QUANDO ALGUMA REGRA DA APLICAÇÃO É VIOLADA
-// ESSA EXCEÇÃO PRODUZ UMA RESPOSTA PADRÃO EM FORMATO ProblemDetail (RFC 7807)
+// EXCEÇÃO BASE DE REGRA DE NEGÓCIO (BusinessException)
+// ESSA CLASSE É ABSTRATA E SERVE DE MODELO PARA OUTRAS EXCEÇÕES DE NEGÓCIO
+// TODAS AS EXCEÇÕES ESPECÍFICAS DEVEM IMPLEMENTAR O MÉTODO toProblemDetail()
 // -----------------------------------------------------------------------------
-public class BusinessException extends RuntimeException {
+public abstract class BusinessException extends RuntimeException {
 
     // -------------------------------------------------------------------------
     // CONSTRUTOR QUE RECEBE A MENSAGEM DA EXCEÇÃO
@@ -19,21 +19,9 @@ public class BusinessException extends RuntimeException {
     }
 
     // -------------------------------------------------------------------------
-    // CONVERTE A EXCEÇÃO PARA UM OBJETO ProblemDetail
-    // ESSE FORMATO É PADRÃO PARA ERROS EM APIs REST (HTTP PROBLEM DETAILS)
+    // MÉTODO ABSTRATO
+    // CADA EXCEÇÃO FILHA SERÁ RESPONSÁVEL POR GERAR SEU PRÓPRIO ProblemDetail
+    // (EX: NotFoundException retorna 404, ForbiddenException retorna 403, etc.)
     // -------------------------------------------------------------------------
-    public ProblemDetail toProblemDetail() {
-
-        // CRIA UM ERRO COM STATUS 400 — BAD_REQUEST
-        // UTILIZADO QUANDO A REGRA DE NEGÓCIO FOI VIOLADA
-        var pb = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-
-        // TÍTULO PADRÃO DO ERRO DA APLICAÇÃO
-        pb.setTitle("EduCelulares business error.");
-
-        // DETALHE DO ERRO COM A MENSAGEM ESPECÍFICA
-        pb.setDetail(this.getMessage());
-
-        return pb;
-    }
+    public abstract ProblemDetail toProblemDetail();
 }

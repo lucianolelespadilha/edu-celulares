@@ -11,7 +11,7 @@ import org.springframework.http.ProblemDetail;
     //* PRODUZ UMA RESPOSTA PADRÃO EM FORMATO ProblemDetail (HTTP 404).
     //* -------------------------------------------------------------------------
     //**
-    public class NotFoundException extends RuntimeException {
+    public class NotFoundException extends BusinessException {
 
     // ---------------------------------------------------------------------
     // CONSTRUTOR QUE RECEBE A MENSAGEM DESCRITIVA DO ERRO
@@ -25,6 +25,7 @@ import org.springframework.http.ProblemDetail;
     // CONVERTE ESTA EXCEÇÃO EM UM OBJETO ProblemDetail
     // UTILIZADO PELO RestExceptionHandler PARA RETORNAR ERROS PADRONIZADOS
     // ---------------------------------------------------------------------
+        @Override
     public ProblemDetail toProblemDetail() {
         // CRIA UM PROBLEMDETAIL COM STATUS 404 — NOT_FOUND
         var pb = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);

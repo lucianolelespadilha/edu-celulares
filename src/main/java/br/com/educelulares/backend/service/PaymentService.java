@@ -4,6 +4,8 @@ import br.com.educelulares.backend.dto.PaymentCreateDto;
 import br.com.educelulares.backend.dto.PaymentDto;
 import br.com.educelulares.backend.entity.Order;
 import br.com.educelulares.backend.entity.Payment;
+import br.com.educelulares.backend.exception.ConflictException;
+import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.OrderRepository;
 import br.com.educelulares.backend.repository.PaymentRepository;
 import jakarta.transaction.Transactional;
@@ -33,14 +35,13 @@ public class PaymentService {
         // ---------------------------------------------------------------------
         Order order = orderRepository.findById(paymentCreateDto.orderId())
                 .orElseThrow(() ->
-                        new IllegalArgumentException("ORDER NOT FOUND WITH ID: " + paymentCreateDto.orderId()));
+                        new ConflictException("ORDER NOT FOUND WITH ID: " + paymentCreateDto.orderId()));
 
         // ---------------------------------------------------------------------
         // GARANTE QUE O PEDIDO NÃO POSSUI PAGAMENTO DUPLICADO
         // ---------------------------------------------------------------------
         if (paymentRepository.existsByOrderId(paymentCreateDto.orderId())) {
-            throw new IllegalArgumentException(
-                    "PAYMENT ALREADY EXISTS FOR THIS ORDER: " + paymentCreateDto.orderId()
+            throw new ConflictException("PAYMENT ALREADY EXISTS FOR THIS ORDER: " + paymentCreateDto.orderId()
             );
         }
 
@@ -49,8 +50,7 @@ public class PaymentService {
         // ---------------------------------------------------------------------
         if (paymentCreateDto.amount() == null ||
                 paymentCreateDto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException(
-                    "INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
+            throw new ConflictException("INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
             );
         }
 
@@ -86,7 +86,7 @@ public class PaymentService {
     public PaymentDto findById(Long id) {
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("PAYMENT NOT FOUND WITH ID: " + id));
+                        new ConflictException("PAYMENT NOT FOUND WITH ID: " + id));
 
         return toPaymentDto(payment);
     }
@@ -112,15 +112,14 @@ public class PaymentService {
         // ---------------------------------------------------------------------
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("PAYMENT NOT FOUND WITH ID: " + id));
+                        new ConflictException("PAYMENT NOT FOUND WITH ID: " + id));
 
         // ---------------------------------------------------------------------
         // ATUALIZA O VALOR DO PAGAMENTO (SE INFORMADO)
         // ---------------------------------------------------------------------
         if (paymentCreateDto.amount() != null) {
             if (paymentCreateDto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalArgumentException(
-                        "INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
+                throw new ConflictException("INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
                 );
             }
             payment.setAmount(paymentCreateDto.amount());
@@ -146,7 +145,7 @@ public class PaymentService {
                     payment.setStatus("FAILED");
                     payment.setPaidAt(null);
                 }
-                default -> throw new IllegalArgumentException("INVALID PAYMENT STATUS: " + newStatus);
+                default -> throw new ConflictException("INVALID PAYMENT STATUS: " + newStatus);
             }
         }
 
@@ -165,7 +164,7 @@ public class PaymentService {
 
         // VALIDA EXISTÊNCIA DO PAGAMENTO
         if (!paymentRepository.existsById(id)) {
-            throw new IllegalArgumentException("PAYMENT NOT FOUND WITH ID: " + id);
+            throw new ConflictException("PAYMENT NOT FOUND WITH ID: " + id);
         }
 
         // REMOVE DO BANCO

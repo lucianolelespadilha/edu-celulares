@@ -3,6 +3,7 @@ package br.com.educelulares.backend.service;
 import br.com.educelulares.backend.dto.ProductCreateDto;
 import br.com.educelulares.backend.dto.ProductDto;
 import br.com.educelulares.backend.entity.Product;
+import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,12 +29,12 @@ public class ProductService {
 
         // VALIDAÇÃO DO NOME DO PRODUTO
         if (productCreateDto.name() == null || productCreateDto.name().isBlank()) {
-            throw new IllegalArgumentException("PRODUCT NAME IS REQUIRED");
+            throw new NotFoundException("PRODUCT NAME IS REQUIRED");
         }
 
         // VALIDAÇÃO DO PREÇO DO PRODUTO
         if (productCreateDto.price() == null) {
-            throw new IllegalArgumentException("PRICE IS REQUIRED");
+            throw new NotFoundException("PRICE IS REQUIRED");
         }
 
         // CRIA UMA NOVA INSTÂNCIA DE PRODUCT
@@ -65,7 +66,7 @@ public class ProductService {
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("PRODUCT NOT FOUND WITH ID: " + id));
+                        new NotFoundException("PRODUCT NOT FOUND WITH ID: " + id));
 
         return toProductDto(product);
     }
@@ -78,7 +79,7 @@ public class ProductService {
         // BUSCA O PRODUTO QUE SERÁ ATUALIZADO
         Product product = productRepository.findById(id)
                 .orElseThrow(() ->
-                        new IllegalArgumentException("PRODUCT NOT FOUND WITH ID: " + id));
+                        new NotFoundException("PRODUCT NOT FOUND WITH ID: " + id));
 
         // ATUALIZA CAMPOS
         product.setName(productCreateDto.name());
@@ -97,7 +98,7 @@ public class ProductService {
     public void deleteProductById(Long id) {
 
         if (!productRepository.existsById(id)) {
-            throw new IllegalArgumentException("PRODUCT NOT FOUND WITH ID: " + id);
+            throw new NotFoundException("PRODUCT NOT FOUND WITH ID: " + id);
         }
 
         productRepository.deleteById(id);

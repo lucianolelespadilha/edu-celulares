@@ -3,6 +3,7 @@ package br.com.educelulares.backend.service;
 import br.com.educelulares.backend.dto.CustomerCreateDto;
 import br.com.educelulares.backend.dto.CustomerDto;
 import br.com.educelulares.backend.entity.Customer;
+import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.CustomerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -47,7 +48,7 @@ public class CustomerService {
     // ---------------------------------------------------------------------
     public CustomerDto findById(Long id) {
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Customer not found"));
+                .orElseThrow(()-> new NotFoundException("Customer not found"));
         return new CustomerDto(customer.getId(), customer.getName(), customer.getEmail());
     }
 
@@ -56,7 +57,7 @@ public class CustomerService {
     // ---------------------------------------------------------------------
     public CustomerDto updateCustomer(Long id ,CustomerCreateDto customerCreateDto) {
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(()-> new RuntimeException("Customer not found"));
+                .orElseThrow(()-> new NotFoundException("Customer not found"));
         customer.setName(customerCreateDto.name());
         customer.setEmail(customerCreateDto.email());
         Customer updatedCustomer = customerRepository.save(customer);
@@ -68,7 +69,7 @@ public class CustomerService {
     // ---------------------------------------------------------------------
     public void deleteCustomer(Long id) {
         if(!customerRepository.existsById(id)){
-            throw new RuntimeException("Customer not found");
+            throw new NotFoundException("Customer not found");
         }
         customerRepository.deleteById(id);
     }

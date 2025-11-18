@@ -53,6 +53,18 @@ public class RestExceptionHandler {
     }
 
     // -------------------------------------------------------------------------
+    // TRATA QUALQUER OUTRA EXCEÇÃO NÃO PREVISTA (ERRO INTERNO 500)
+    // GARANTE QUE A API NUNCA RETORNE UMA STACKTRACE PRO CLIENTE
+    // -------------------------------------------------------------------------
+    @ExceptionHandler(Exception.class)
+    public ProblemDetail handleGenericException(Exception exception) {
+        var pb = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        pb.setTitle("Erro interno inesperado");
+        pb.setDetail("Ocorreu um erro inesperado. Tente novamente mais tarde.");
+        return pb;
+    }
+
+    // -------------------------------------------------------------------------
     // RECORD APENAS PARA ESTRUTURAR OS CAMPOS INVÁLIDOS RETORNADOS NAS VALIDAÇÕES
     // CONTÉM O NOME DO CAMPO E O MOTIVO DO ERRO
     // -------------------------------------------------------------------------

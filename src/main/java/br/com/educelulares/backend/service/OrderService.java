@@ -8,6 +8,8 @@ import br.com.educelulares.backend.entity.Customer;
 import br.com.educelulares.backend.entity.Order;
 import br.com.educelulares.backend.entity.OrderItem;
 import br.com.educelulares.backend.entity.Product;
+import br.com.educelulares.backend.exception.BadRequestException;
+import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.CustomerRepository;
 import br.com.educelulares.backend.repository.OrderItemRepository;
 import br.com.educelulares.backend.repository.OrderRepository;
@@ -45,12 +47,12 @@ public class OrderService {
 
         // VERIFICA SE O ID DO CLIENTE FOI INFORMADO
         if (orderCreateDto.costumerId() == null) {
-            throw new IllegalArgumentException("CUSTOMER ID IS REQUIRED");
+            throw new BadRequestException("CUSTOMER ID IS REQUIRED");
         }
 
         // BUSCA O CLIENTE NO BANCO DE DADOS OU LANÇA EXCEÇÃO CASO NÃO ENCONTRADO
         Customer customer = customerRepository.findById(orderCreateDto.costumerId())
-                .orElseThrow(() -> new RuntimeException("CUSTOMER NOT FOUND"));
+                .orElseThrow(() -> new NotFoundException("CUSTOMER NOT FOUND"));
 
         // CRIA UM NOVO PEDIDO E DEFINE O CLIENTE
         Order order = new Order();
@@ -64,12 +66,12 @@ public class OrderService {
 
             // VALIDA SE O ITEM POSSUI PRODUTO E QUANTIDADE VÁLIDOS
             if (itemDto == null || itemDto.productId() == null || itemDto.quantity() == null) {
-                throw new IllegalArgumentException("PRODUCT ID OR QUANTITY IS REQUIRED");
+                throw new BadRequestException("PRODUCT ID OR QUANTITY IS REQUIRED");
             }
 
             // BUSCA O PRODUTO PELO ID INFORMADO OU LANÇA EXCEÇÃO CASO NÃO ENCONTRADO
             Product product = productRepository.findById(itemDto.productId())
-                    .orElseThrow(() -> new RuntimeException("PRODUCT NOT FOUND: " + itemDto.productId()));
+                    .orElseThrow(() -> new NotFoundException("PRODUCT NOT FOUND: " + itemDto.productId()));
 
             // CRIA UM NOVO ITEM DE PEDIDO E CONFIGURA SUAS PROPRIEDADES
             OrderItem orderItem = new OrderItem();
@@ -103,7 +105,7 @@ public class OrderService {
     // ---------------------------------------------------------------------
     public OrderDto findById(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("ORDER NOT FOUND"));
+                .orElseThrow(() -> new NotFoundException("ORDER NOT FOUND"));
         return toOrderDto(order);
     }
 
@@ -112,7 +114,7 @@ public class OrderService {
     // ---------------------------------------------------------------------
     public void delete(Long id) {
         if (!orderRepository.existsById(id)) {
-            throw new RuntimeException("ORDER NOT FOUND");
+            throw new NotFoundException("ORDER NOT FOUND");
         }
         orderRepository.deleteById(id);
     }
