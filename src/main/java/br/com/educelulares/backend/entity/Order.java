@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.boot.autoconfigure.web.WebProperties;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -37,5 +38,20 @@ public class Order {
     private Payment payment;
 
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public BigDecimal getTotalAmount() {
+         if(items == null|| items.isEmpty() ){
+             return BigDecimal.ZERO;
+         }
+
+         return items.stream()
+                 .map(item->
+                                 item.getPrice().multiply(
+                                         BigDecimal.valueOf(item.getQuantity())
+                 )
+                 )
+                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+    }
 
 }

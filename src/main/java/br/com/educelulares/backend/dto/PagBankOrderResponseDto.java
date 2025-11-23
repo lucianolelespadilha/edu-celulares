@@ -16,7 +16,7 @@ import java.util.List;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class PagBakOrderResponseDto {
+public class PagBankOrderResponseDto {
 
     // IDENTIFICADOR DO PEDIDO GERADO PELO PAGBANK
     private String id;
