@@ -1,8 +1,7 @@
-package br.com.educelulares.backend.service;
+package br.com.educelulares.backend.pagbank;
 
 import br.com.educelulares.backend.dto.PagBankOrderRequestDto;
 import br.com.educelulares.backend.dto.PagBankOrderResponseDto;
-import br.com.educelulares.backend.dto.PagBankPaymentResponseDto;
 import br.com.educelulares.backend.exception.BadRequestException;
 import br.com.educelulares.backend.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +19,7 @@ public class PagBankClient {
     // ESTE É O CLIENTE HTTP UTILIZADO PARA CHAMAR A API DO PAGBANK
     // ELE JÁ POSSUI BASE URL E HEADERS PADRÕES DEFINIDOS NA CONFIGURAÇÃO
     // -----------------------------------------------------------------------------
-    private final WebClient pagBankClient;
+    private final WebClient pagBankWebClient;
 
 
     // -----------------------------------------------------------------------------
@@ -30,7 +29,7 @@ public class PagBankClient {
     // -----------------------------------------------------------------------------
     public PagBankOrderResponseDto createPixOrder(PagBankOrderRequestDto pagBankOrderRequestDto) {
 
-        return pagBankClient.post()
+        return pagBankWebClient.post()
                 // ENDPOINT PARA CRIAÇÃO DE ORDEM DE PAGAMENTO
                 .uri("/orders")
 
@@ -84,9 +83,9 @@ public class PagBankClient {
     // UTILIZA O ENDPOINT /orders/{id} DO PAGBANK
     // RETORNA O PagBankPaymentResponseDto COM AS INFORMAÇÕES ATUALIZADAS
     // -----------------------------------------------------------------------------
-    public PagBankPaymentResponseDto getPaymentStatus(String orderId) {
+    public PagBankOrderResponseDto getPaymentStatus(String orderId) {
 
-        return pagBankClient.get()
+        return pagBankWebClient.get()
                 // ENDPOINT PARA CONSULTAR ORDEM PELO ID
                 .uri("/orders/{id}", orderId)
 
@@ -115,7 +114,7 @@ public class PagBankClient {
                 // -----------------------------------------------------------------------------
                 // CONVERTE O JSON COM O STATUS ATUAL EM PagBankPaymentResponseDto
                 // -----------------------------------------------------------------------------
-                .bodyToMono(PagBankPaymentResponseDto.class)
+                .bodyToMono(PagBankOrderResponseDto.class)
 
                 // -----------------------------------------------------------------------------
                 // EXECUTA DE FORMA SINCRONA PARA COMPATIBILIDADE COM SUA ARQUITETURA

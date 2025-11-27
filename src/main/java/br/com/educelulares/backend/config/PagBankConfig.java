@@ -43,7 +43,7 @@ public class PagBankConfig {
     // ESTE WEBCLIENT SERÁ INJETADO EM SERVIÇOS COMO: PagBankService
     // -------------------------------------------------------------------------
     @Bean
-    public WebClient pagBankClient() {
+    public WebClient pagBankWebClient() {
         return WebClient.builder()
                 .baseUrl(baseUrl)
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
