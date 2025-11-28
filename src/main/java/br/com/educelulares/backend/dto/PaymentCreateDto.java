@@ -1,4 +1,5 @@
 package br.com.educelulares.backend.dto;
+import br.com.educelulares.backend.enums.PaymentStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -15,7 +16,7 @@ public record PaymentCreateDto (
         @NotNull
         @Positive
         BigDecimal amount,
-        @NotBlank
-        String status,
+
+        PaymentStatus status,
         LocalDateTime paidAt
 ){}

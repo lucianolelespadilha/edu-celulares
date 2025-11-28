@@ -4,14 +4,14 @@ import br.com.educelulares.backend.dto.PaymentCreateDto;
 import br.com.educelulares.backend.dto.PaymentDto;
 import br.com.educelulares.backend.entity.Order;
 import br.com.educelulares.backend.entity.Payment;
+import br.com.educelulares.backend.enums.PaymentStatus;
 import br.com.educelulares.backend.exception.ConflictException;
-import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.repository.OrderRepository;
 import br.com.educelulares.backend.repository.PaymentRepository;
-import jakarta.transaction.Transactional;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -24,75 +24,56 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
 
+
     // =========================================================================
-    // CRIA UM NOVO PAGAMENTO
+    // CREATE PAYMENT
     // =========================================================================
     @Transactional
-    public PaymentDto createPayment(PaymentCreateDto paymentCreateDto) {
+    public PaymentDto createPayment(PaymentCreateDto dto) {
 
-        // ---------------------------------------------------------------------
-        // VALIDA E BUSCA O PEDIDO REFERENCIADO PELO PAGAMENTO
-        // ---------------------------------------------------------------------
-        Order order = orderRepository.findById(paymentCreateDto.orderId())
-                .orElseThrow(() ->
-                        new ConflictException("ORDER NOT FOUND WITH ID: " + paymentCreateDto.orderId()));
+        Order order = orderRepository.findById(dto.orderId())
+                .orElseThrow(() -> new ConflictException("ORDER NOT FOUND: " + dto.orderId()));
 
-        // ---------------------------------------------------------------------
-        // GARANTE QUE O PEDIDO NÃO POSSUI PAGAMENTO DUPLICADO
-        // ---------------------------------------------------------------------
-        if (paymentRepository.existsByOrderId(paymentCreateDto.orderId())) {
-            throw new ConflictException("PAYMENT ALREADY EXISTS FOR THIS ORDER: " + paymentCreateDto.orderId()
-            );
+        if (paymentRepository.existsByOrderId(dto.orderId())) {
+            throw new ConflictException("PAYMENT ALREADY EXISTS FOR ORDER: " + dto.orderId());
         }
 
-        // ---------------------------------------------------------------------
-        // VALIDA VALOR DO PAGAMENTO
-        // ---------------------------------------------------------------------
-        if (paymentCreateDto.amount() == null ||
-                paymentCreateDto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ConflictException("INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
-            );
+        if (dto.amount() == null || dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ConflictException("INVALID PAYMENT AMOUNT: " + dto.amount());
         }
 
-        // ---------------------------------------------------------------------
-        // MONTA A ENTIDADE PAYMENT
-        // ---------------------------------------------------------------------
         Payment payment = new Payment();
         payment.setOrder(order);
-        payment.setAmount(paymentCreateDto.amount());
+        payment.setAmount(dto.amount());
 
-        // STATUS PADRÃO → "PENDING"
-        payment.setStatus(
-                paymentCreateDto.status() != null
-                        ? paymentCreateDto.status()
-                        : "PENDING"
-        );
+        // Se vier null → vira PENDING
+        PaymentStatus status = dto.status() != null
+                ? dto.status()
+                : PaymentStatus.PENDING;
 
-        // SE O STATUS FOR "PAID", REGISTRA O MOMENTO DO PAGAMENTO
-        if ("PAID".equalsIgnoreCase(payment.getStatus())) {
+        payment.setStatus(status);
+
+        if (status == PaymentStatus.PAID) {
             payment.setPaidAt(LocalDateTime.now());
         }
 
-        // ---------------------------------------------------------------------
-        // SALVA E RETORNA DTO
-        // ---------------------------------------------------------------------
         Payment saved = paymentRepository.save(payment);
         return toPaymentDto(saved);
     }
 
+
     // =========================================================================
-    // BUSCA PAGAMENTO POR ID
+    // GET BY ID
     // =========================================================================
     public PaymentDto findById(Long id) {
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() ->
-                        new ConflictException("PAYMENT NOT FOUND WITH ID: " + id));
-
+                .orElseThrow(() -> new ConflictException("PAYMENT NOT FOUND: " + id));
         return toPaymentDto(payment);
     }
 
+
     // =========================================================================
-    // BUSCA TODOS OS PAGAMENTOS
+    // LIST ALL
     // =========================================================================
     public List<PaymentDto> findAll() {
         return paymentRepository.findAll()
@@ -101,78 +82,69 @@ public class PaymentService {
                 .toList();
     }
 
+
     // =========================================================================
-    // ATUALIZA UM PAGAMENTO
+    // UPDATE PAYMENT
     // =========================================================================
     @Transactional
-    public PaymentDto updatePayment(Long id, PaymentCreateDto paymentCreateDto) {
+    public PaymentDto updatePayment(Long id, PaymentCreateDto dto) {
 
-        // ---------------------------------------------------------------------
-        // BUSCA O PAGAMENTO QUE SERÁ ATUALIZADO
-        // ---------------------------------------------------------------------
         Payment payment = paymentRepository.findById(id)
-                .orElseThrow(() ->
-                        new ConflictException("PAYMENT NOT FOUND WITH ID: " + id));
+                .orElseThrow(() -> new ConflictException("PAYMENT NOT FOUND: " + id));
 
-        // ---------------------------------------------------------------------
-        // ATUALIZA O VALOR DO PAGAMENTO (SE INFORMADO)
-        // ---------------------------------------------------------------------
-        if (paymentCreateDto.amount() != null) {
-            if (paymentCreateDto.amount().compareTo(BigDecimal.ZERO) <= 0) {
-                throw new ConflictException("INVALID PAYMENT AMOUNT: " + paymentCreateDto.amount()
-                );
+        // Atualiza amount, se enviado
+        if (dto.amount() != null) {
+            if (dto.amount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new ConflictException("INVALID PAYMENT AMOUNT: " + dto.amount());
             }
-            payment.setAmount(paymentCreateDto.amount());
+            payment.setAmount(dto.amount());
         }
 
-        // ---------------------------------------------------------------------
-        // ATUALIZA O STATUS DO PAGAMENTO (SE INFORMADO)
-        // ---------------------------------------------------------------------
-        if (paymentCreateDto.status() != null) {
+        // Atualiza status, se enviado
+        if (dto.status() != null) {
 
-            String newStatus = paymentCreateDto.status().toUpperCase();
+            PaymentStatus statusEnum = dto.status();
 
-            switch (newStatus) {
-                case "PAID" -> {
-                    payment.setStatus("PAID");
+            switch (statusEnum) {
+                case PAID -> {
+                    payment.setStatus(PaymentStatus.PAID);
                     payment.setPaidAt(LocalDateTime.now());
                 }
-                case "PENDING" -> {
-                    payment.setStatus("PENDING");
+                case PENDING -> {
+                    payment.setStatus(PaymentStatus.PENDING);
                     payment.setPaidAt(null);
                 }
-                case "FAILED" -> {
-                    payment.setStatus("FAILED");
+                case FAILED -> {
+                    payment.setStatus(PaymentStatus.FAILED);
                     payment.setPaidAt(null);
                 }
-                default -> throw new ConflictException("INVALID PAYMENT STATUS: " + newStatus);
+                case EXPIRED -> {
+                    payment.setStatus(PaymentStatus.EXPIRED);
+                    payment.setPaidAt(null);
+                }
+                default -> throw new ConflictException("INVALID PAYMENT STATUS: " + statusEnum);
             }
         }
 
-        // ---------------------------------------------------------------------
-        // SALVA ALTERAÇÕES E RETORNA DTO
-        // ---------------------------------------------------------------------
         Payment updated = paymentRepository.save(payment);
         return toPaymentDto(updated);
     }
 
+
     // =========================================================================
-    // REMOVE UM PAGAMENTO
+    // DELETE
     // =========================================================================
     @Transactional
     public void deletePayment(Long id) {
-
-        // VALIDA EXISTÊNCIA DO PAGAMENTO
         if (!paymentRepository.existsById(id)) {
-            throw new ConflictException("PAYMENT NOT FOUND WITH ID: " + id);
+            throw new ConflictException("PAYMENT NOT FOUND: " + id);
         }
-
-        // REMOVE DO BANCO
         paymentRepository.deleteById(id);
     }
 
+
     // =========================================================================
-    // CONVERTE ENTIDADE PARA DTO
+    // MAPPER
     // =========================================================================
     private PaymentDto toPaymentDto(Payment payment) {
         return new PaymentDto(

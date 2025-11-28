@@ -2,6 +2,7 @@ package br.com.educelulares.backend.service;
 
 import br.com.educelulares.backend.entity.Order;
 import br.com.educelulares.backend.entity.Payment;
+import br.com.educelulares.backend.enums.PaymentStatus;
 import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.pagbank.PagBankClient;
 import br.com.educelulares.backend.dto.PagBankAddressDto;
@@ -97,6 +98,14 @@ public class PagBankService {
         log.info("PAGBANK GEROU PIX ORDER INTERNA={} PAGBANK_ID={}",
                 order.getId(), responseDto.getId());
 
+        if(order.getPayment() == null){
+            Payment payment = new Payment();
+            payment.setOrder(order);
+            payment.setAmount(order.getTotalAmount());
+            payment.setStatus(PaymentStatus.PENDING);
+            order.setPayment(payment);
+        }
+
         return responseDto;
     }
 
@@ -138,20 +147,20 @@ public class PagBankService {
         // Mapeamento de status
         switch (externalStatus) {
             case "PAID" -> {
-                payment.setStatus("PAID");
+                payment.setStatus(PaymentStatus.PAID);
                 payment.setPaidAt(LocalDateTime.now());
                 log.info("PAGAMENTO CONFIRMADO PARA ORDER {}", order.getId());
             }
             case "WAITING_PAYMENT", "CREATED" -> {
-                payment.setStatus("PENDING");
+                payment.setStatus(PaymentStatus.PENDING);
                 log.info("PAGAMENTO PENDENTE PARA ORDER {}", order.getId());
             }
             case "EXPIRED" -> {
-                payment.setStatus("EXPIRED");
+                payment.setStatus(PaymentStatus.EXPIRED);
                 log.warn("PAGAMENTO EXPIRADO PARA ORDER {}", order.getId());
             }
             case "CANCELED", "REFUSED" -> {
-                payment.setStatus("FAILED");
+                payment.setStatus(PaymentStatus.FAILED);
                 log.warn("PAGAMENTO CANCELADO/RECUSADO PARA ORDER {}", order.getId());
             }
             default -> log.warn("STATUS NÃO MAPEADO: {}", externalStatus);

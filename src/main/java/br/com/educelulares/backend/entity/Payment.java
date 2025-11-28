@@ -1,5 +1,6 @@
 package br.com.educelulares.backend.entity;
 
+import br.com.educelulares.backend.enums.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -24,7 +25,12 @@ public class Payment {
     @JoinColumn(name = "order_id")
     private Order order;
 
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus status;
+
+
     private BigDecimal amount;
-    private String status; // "PAID", "PENDING", "FAILED"
     private LocalDateTime paidAt;
+
+
 }
