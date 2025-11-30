@@ -1,22 +1,21 @@
 package br.com.educelulares.backend.dto;
 import br.com.educelulares.backend.enums.PaymentStatus;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 import java.math.BigDecimal;
 
-import java.time.LocalDateTime;
+public record PaymentCreateDto(
 
-public record PaymentCreateDto (
-        @NotNull
-        Long id,
-        @NotNull
+        @NotNull(message = "orderId is required")
+        @Positive(message = "orderId must be positive")
         Long orderId,
-        @NotNull
-        @Positive
+
+        @NotNull(message = "amount is required")
+        @Positive(message = "amount must be greater than zero")
         BigDecimal amount,
 
-        PaymentStatus status,
-        LocalDateTime paidAt
-){}
+
+        PaymentStatus status
+) {}
+

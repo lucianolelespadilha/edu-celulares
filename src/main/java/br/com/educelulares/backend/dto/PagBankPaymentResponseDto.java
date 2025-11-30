@@ -1,5 +1,7 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,15 +18,20 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PagBankPaymentResponseDto {
 
-    // CÓDIGO RETORNADO PELO PAGBANK (EX: STATUS OU CÓDIGO DE ERRO)
+    // CÓDIGO DA RESPOSTA (SUCCESS, ERROR, INVALID_REQUEST, ETC.)
+    @NotBlank(message = "Response code cannot be blank")
     private String code;
 
-    // MENSAGEM ASSOCIADA AO CÓDIGO (EX: "SUCCESS", "INVALID REQUEST")
+    // DESCRIÇÃO DO RESULTADO
+    @NotBlank(message = "Response message cannot be blank")
     private String message;
 
-    // OBJETO CONTENDO OS DADOS DO QR CODE GERADO PARA O PAGAMENTO
+    // QR CODE GERADO (PODE SER NULO EM ALGUNS TIPOS DE COBRANÇA)
+    @Valid
     private PagBankQRCodeDto qr_code;
 
-    // LINK DE PAGAMENTO RETORNADO PELO PAGBANK
+    // LINK DE PAGAMENTO (PODE SER NULO EM PIX)
+    @Valid
     private PagBankLinkPaymentDto link;
 }
+

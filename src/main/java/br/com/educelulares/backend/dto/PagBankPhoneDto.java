@@ -1,5 +1,7 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,19 +19,33 @@ import lombok.Setter;
 public class PagBankPhoneDto {
 
     // -------------------------------------------------------------------------
-    // CÓDIGO DO PAÍS (EXEMPLO: "55" PARA BRASIL)
-    // UTILIZADO PARA FORMATAÇÃO E VALIDAÇÃO DO TELEFONE PELO PAGBANK
+    // CÓDIGO DO PAÍS (EX: "55")
     // -------------------------------------------------------------------------
+    @NotBlank(message = "Country code is required")
+    @Pattern(
+            regexp = "\\d{1,3}",
+            message = "Country code must contain 1 to 3 digits"
+    )
     private String country;
 
     // -------------------------------------------------------------------------
-    // CÓDIGO DE ÁREA (DDD) DO CLIENTE (EXEMPLO: "11", "21", "48"...)
-    // -----------------------------------------------------------------------------
+    // CÓDIGO DE ÁREA (DDD) DO CLIENTE (EX: "11", "21")
+    // -------------------------------------------------------------------------
+    @NotBlank(message = "Area code (DDD) is required")
+    @Pattern(
+            regexp = "\\d{2}",
+            message = "Area code must contain exactly 2 digits"
+    )
     private String area;
 
     // -------------------------------------------------------------------------
-    // NÚMERO DE TELEFONE DO CLIENTE (SEM DDD E SEM FORMATAÇÃO)
-    // EXEMPLO: "998877665"
-    // -----------------------------------------------------------------------------
+    // TELEFONE SEM FORMATAÇÃO
+    // ACEITA DE 8 A 11 DÍGITOS (REGRAS DA ANATEL)
+    // -------------------------------------------------------------------------
+    @NotBlank(message = "Phone number is required")
+    @Pattern(
+            regexp = "\\d{8,11}",
+            message = "Phone number must contain 8 to 11 digits (numbers only)"
+    )
     private String number;
 }

@@ -1,5 +1,10 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,15 +23,26 @@ import java.util.List;
 @NoArgsConstructor
 public class PagBankOrderResponseDto {
 
-    // IDENTIFICADOR DO PEDIDO GERADO PELO PAGBANK
+    // ID GERADO PELO PAGBANK PARA A ORDEM
+    @NotBlank(message = "Order ID from PagBank cannot be null or blank")
     private String id;
 
-    // IDENTIFICADOR DO PEDIDO NO SEU SISTEMA (EX: "ORDER-123")
+    // ID INTERNO DA SUA APLICAÇÃO
+    @NotBlank(message = "reference_id cannot be blank")
     private String reference_id;
 
-    // STATUS ATUAL DO PEDIDO (EX: "CREATED", "WAITING_PAYMENT", "PAID")
+    // STATUS DO PAGBANK (CREATED, WAITING_PAYMENT, PAID, CANCELED, EXPIRED)
+    @NotBlank(message = "Order status cannot be blank")
+    @Pattern(
+            regexp = "CREATED|WAITING_PAYMENT|PAID|CANCELED|EXPIRED",
+            message = "Invalid PagBank order status"
+    )
     private String status;
 
-    // LISTA DE COBRANÇAS GERADAS PARA O PEDIDO (LINKS, QR CODE, ETC.)
+    // COBRANÇAS ASSOCIADAS (LINKS, QRCODE, ETC.)
+    @NotNull(message = "charges list cannot be null")
+    @Size(min = 1, message = "charges list must contain at least 1 element")
+    @Valid
     private List<PagBankLinkDto> charges;
 }
+

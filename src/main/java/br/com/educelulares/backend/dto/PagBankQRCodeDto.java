@@ -1,5 +1,7 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,15 +18,15 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PagBankQRCodeDto {
 
-    // -------------------------------------------------------------------------
-    // IMAGEM DO QR CODE EM FORMATO BASE64
-    // PERMITE GERAR UMA IMAGEM DIRETO NO FRONT-END
-    // -------------------------------------------------------------------------
+    // IMAGEM DO QR CODE EM BASE64
+    @NotBlank(message = "QR Code base64 is required")
+    @Pattern(
+            regexp = "^[A-Za-z0-9+/=]+$",
+            message = "Invalid base64 format"
+    )
     private String base64;
 
-    // -------------------------------------------------------------------------
-    // CONTEÚDO DO QR CODE (GERALMENTE TEXTO CODIFICADO)
-    // USADO PARA APRESENTAR OU GERAR MANUALMENTE O QR CODE SE NECESSÁRIO
-    // -------------------------------------------------------------------------
+    // CONTEÚDO DO QR CODE (TEXTO CODIFICADO)
+    @NotBlank(message = "QR Code content is required")
     private String content;
 }

@@ -1,5 +1,10 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,36 +24,44 @@ import java.util.List;
 public class PagBankOrderRequestDto {
 
     // -------------------------------------------------------------------------
-    // IDENTIFICADOR ÚNICO DO PEDIDO NA SUA APLICAÇÃO.
-    // SERVE PARA RELACIONAR A RESPOSTA DO PAGBANK COM O PEDIDO LOCAL.
-    // EXEMPLO: "PEDIDO-123", "VENDA-2025-01"
+    // IDENTIFICADOR ÚNICO DO PEDIDO NO SEU SISTEMA
+    // NÃO PODE SER NULO OU VAZIO
     // -------------------------------------------------------------------------
+    @NotBlank(message = "reference_id is required")
     private String reference_Id;
 
     // -------------------------------------------------------------------------
-    // INFORMAÇÕES DO CLIENTE (NOME, EMAIL, CPF, ENDEREÇO ETC.)
-    // REPRESENTADO PELO DTO PagBankCustomerDto
+    // INFORMAÇÕES DO CLIENTE
+    // NECESSÁRIO PARA GERAÇÃO DO PEDIDO
     // -------------------------------------------------------------------------
+    @NotNull(message = "customer is required")
+    @Valid
     private PagBankCustomerDto customer;
 
     // -------------------------------------------------------------------------
-    // LISTA DE ITENS DO PEDIDO
-    // CADA ITEM CONTÉM: NOME, QUANTIDADE E VALOR UNITÁRIO
-    // REPRESENTADO PELO DTO PagBankItemDto
+    // LISTA DE ITENS - NÃO PODE SER VAZIA
     // -------------------------------------------------------------------------
+    @NotNull(message = "items list cannot be null")
+    @Size(min = 1, message = "order must contain at least 1 item")
+    @Valid
     private List<PagBankItemDto> items;
 
     // -------------------------------------------------------------------------
-    // INFORMAÇÕES DE ENTREGA / FRETE DO PEDIDO
-    // REPRESENTADO PELO DTO PagBankShippingDto
+    // INFORMAÇÕES DE ENTREGA - ENDEREÇO + VALOR
     // -------------------------------------------------------------------------
+    @NotNull(message = "shipping info is required")
+    @Valid
     private PagBankShippingDto shipping;
 
     // -------------------------------------------------------------------------
-    // URLS QUE O PAGBANK IRÁ NOTIFICAR SOBRE ALTERAÇÃO DO STATUS DO PAGAMENTO
-    // EXEMPLO: https://meusite.com/pagbank/webhook
+    // URLS DE NOTIFICAÇÃO DO PAGBANK
     // -------------------------------------------------------------------------
-    private List<String> notification_urls;
+    @NotNull(message = "notification_urls cannot be null")
+    @Size(min = 1, message = "at least one notification URL must be provided")
+    private List<
+            @Pattern(
+                    regexp = "https?://.*",
+                    message = "each notification URL must be a valid http/https address"
+            )
+                    String> notification_urls;
 }
-
-

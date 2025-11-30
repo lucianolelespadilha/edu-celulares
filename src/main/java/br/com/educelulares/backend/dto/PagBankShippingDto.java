@@ -1,5 +1,8 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,15 +21,14 @@ import lombok.Setter;
 @NoArgsConstructor
 public class PagBankShippingDto {
 
-    // -------------------------------------------------------------------------
-    // ENDEREÇO COMPLETO DO CLIENTE.
-    // OBJETO PagBankAddressDto JÁ PADRONIZADO NO FORMATO EXATO DO PAGBANK
-    // -------------------------------------------------------------------------
+    // ENDEREÇO COMPLETO PARA ENTREGA
+    @NotNull(message = "Shipping address is required")
+    @Valid
     private PagBankAddressDto address;
 
-    // -------------------------------------------------------------------------
-    // VALOR DO FRETE EM CENTAVOS.
-    // EXEMPLO: R$ 12,50 → enviar "1250"
-    // -------------------------------------------------------------------------
+    // VALOR DO FRETE EM CENTAVOS (EX: 1250 = R$ 12,50)
+    @NotNull(message = "Shipping amount is required")
+    @Min(value = 0, message = "Shipping amount must be zero or positive")
     private Integer amount;
 }
+

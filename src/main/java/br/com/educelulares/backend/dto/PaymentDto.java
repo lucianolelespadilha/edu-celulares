@@ -14,16 +14,10 @@ import java.time.LocalDateTime;
 
 
 public record PaymentDto(
-        @NotNull
         Long id,
-        @NotNull
         Long orderId,
-        @NotNull
-        @Positive
         BigDecimal amount,
-
         PaymentStatus status,
         LocalDateTime paidAt
+) { }
 
-){
-}

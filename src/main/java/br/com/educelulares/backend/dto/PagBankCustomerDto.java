@@ -1,5 +1,8 @@
 package br.com.educelulares.backend.dto;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,12 +23,14 @@ public class PagBankCustomerDto {
     // NOME COMPLETO DO CLIENTE
     // UTILIZADO PARA IDENTIFICAÇÃO DO COMPRADOR NO PAGBANK
     // -------------------------------------------------------------------------
+    @NotBlank
     private String name;
 
     // -------------------------------------------------------------------------
     // EMAIL DO CLIENTE
     // PAGBANK UTILIZA ESTE CAMPO PARA ENVIO DE CONFIRMAÇÕES E VALIDAÇÕES
     // -------------------------------------------------------------------------
+    @NotBlank
     private String email;
 
     // -------------------------------------------------------------------------
@@ -33,6 +38,8 @@ public class PagBankCustomerDto {
     // ENVOLVIDO NO PROCESSO DE IDENTIFICAÇÃO E CONFIRMAÇÃO DO PAGBANK
     // (DTO ESPECÍFICO: PagBankPhoneDto)
     // -------------------------------------------------------------------------
+    @NotNull
+    @Valid
     private PagBankPhoneDto phone;
 }
 
