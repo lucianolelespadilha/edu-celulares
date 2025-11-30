@@ -1,19 +1,15 @@
 package br.com.educelulares.backend.service;
 
+import br.com.educelulares.backend.dto.*;
+import br.com.educelulares.backend.entity.Customer;
 import br.com.educelulares.backend.entity.Order;
 import br.com.educelulares.backend.entity.Payment;
 import br.com.educelulares.backend.enums.PaymentStatus;
+import br.com.educelulares.backend.exception.BadRequestException;
 import br.com.educelulares.backend.exception.NotFoundException;
 import br.com.educelulares.backend.pagbank.PagBankClient;
-import br.com.educelulares.backend.dto.PagBankAddressDto;
-import br.com.educelulares.backend.dto.PagBankCustomerDto;
-import br.com.educelulares.backend.dto.PagBankItemDto;
-import br.com.educelulares.backend.dto.PagBankOrderRequestDto;
-import br.com.educelulares.backend.dto.PagBankOrderResponseDto;
-import br.com.educelulares.backend.dto.PagBankPhoneDto;
-import br.com.educelulares.backend.dto.PagBankShippingDto;
-import br.com.educelulares.backend.dto.PagBankWebhookDto;
 import br.com.educelulares.backend.repository.OrderRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,19 +26,32 @@ public class PagBankService {
     private final OrderRepository orderRepository;
     private final PagBankClient pagBankClient;
 
-
-    // =============================================================================
-    // 1. CRIA UMA ORDEM DE PAGAMENTO PIX NO PAGBANK
-    // =============================================================================
+    // =========================================================================
+    // 1. CRIA ORDEM PIX NO PAGBANK
+    // =========================================================================
+    @Transactional
     public PagBankOrderResponseDto createPaymentPix(Long orderId) {
 
         log.info("CRIANDO PAGAMENTO PIX PARA ORDER {}", orderId);
 
-        // Busca a order no banco
         Order order = orderRepository.findById(orderId)
-                .orElseThrow(() -> new NotFoundException("Order not found " + orderId));
+                .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
 
-        // Converte itens do pedido para DTO do PagBank
+        // ====================================================
+        // VALIDAÇÃO DO CLIENTE
+        // ====================================================
+        Customer c = order.getCustomer();
+        if (c == null) {
+            throw new BadRequestException("A ordem não possui cliente associado.");
+        }
+
+        if (c.getCpf() == null || c.getCpf().isBlank()) {
+            throw new BadRequestException("CPF/CNPJ do cliente é obrigatório para criar pagamento PIX.");
+        }
+
+        // ====================================================
+        // MONTA ITENS
+        // ====================================================
         List<PagBankItemDto> items = order.getItems().stream()
                 .map(item -> new PagBankItemDto(
                         item.getProduct().getName(),
@@ -51,20 +60,33 @@ public class PagBankService {
                 ))
                 .toList();
 
-        // Calcula total em centavos
         int totalAmount = order.getItems().stream()
                 .map(i -> i.getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .intValue();
 
-        // Cliente (mock)
-        PagBankCustomerDto customer = new PagBankCustomerDto(
-                "Test Client",
-                "email@test.com",
-                new PagBankPhoneDto("55", "11", "999999999")
+        // ====================================================
+        // MONTA TELEFONE DO CLIENTE (usar dados reais se existirem)
+        // ====================================================
+        PagBankPhoneDto phone = new PagBankPhoneDto(
+                "55",
+                "11",
+                "999999999"
         );
 
-        // Endereço (mock)
+        // ====================================================
+        // MONTA CLIENTE PARA O PAGBANK (cpf vira tax_id no JSON)
+        // ====================================================
+        PagBankCustomerDto customerDto = new PagBankCustomerDto(
+                c.getName(),
+                c.getEmail(),
+                c.getCpf(),
+                phone
+        );
+
+        // ====================================================
+        // ENDEREÇO E FRETE (fixo ou via Order)
+        // ====================================================
         PagBankAddressDto address = new PagBankAddressDto(
                 "Test Street",
                 "123",
@@ -77,28 +99,37 @@ public class PagBankService {
                 "01001000"
         );
 
-        // Shipping exigido pelo PagBank
         PagBankShippingDto shipping = new PagBankShippingDto(address, totalAmount);
 
-        // Webhook
-        List<String> notificationUrls = List.of("https://seusite.com/webhook/pagbank");
-
-        // DTO final da requisição
-        PagBankOrderRequestDto requestDto = new PagBankOrderRequestDto(
-                order.getId().toString(),
-                customer,
-                items,
-                shipping,
-                notificationUrls
+        // ====================================================
+        // NOTIFICATION WEBHOOK
+        // ====================================================
+        List<String> notifications = List.of(
+                "https://seusite.com/webhook/pagbank"
         );
 
-        // Chamada correta do PagBankClient
-        PagBankOrderResponseDto responseDto = pagBankClient.createPixOrder(requestDto);
+        // ====================================================
+        // MONTAGEM DO REQUEST AO PAGBANK
+        // ====================================================
+        PagBankOrderRequestDto requestDto = new PagBankOrderRequestDto(
+                order.getId().toString(),
+                customerDto,
+                items,
+                shipping,
+                notifications
+        );
 
-        log.info("PAGBANK GEROU PIX ORDER INTERNA={} PAGBANK_ID={}",
-                order.getId(), responseDto.getId());
+        // ====================================================
+        // ENVIA REQUISIÇÃO PARA O PAGBANK
+        // ====================================================
+        PagBankOrderResponseDto response = pagBankClient.createPixOrder(requestDto);
 
-        if(order.getPayment() == null){
+        log.info("PIX GERADO PARA ORDER={} PAGBANK_ID={}", order.getId(), response.getId());
+
+        // ====================================================
+        // CRIA O REGISTRO DE PAYMENT SE NÃO EXISTIR
+        // ====================================================
+        if (order.getPayment() == null) {
             Payment payment = new Payment();
             payment.setOrder(order);
             payment.setAmount(order.getTotalAmount());
@@ -106,71 +137,65 @@ public class PagBankService {
             order.setPayment(payment);
         }
 
-        return responseDto;
+        orderRepository.save(order);
+
+        return response;
     }
 
-
-
-    // =============================================================================
-    // 2. PROCESSA O WEBHOOK DO PAGBANK
-    // =============================================================================
+    // =========================================================================
+    // 2. PROCESSA WEBHOOK PAGBANK
+    // =========================================================================
+    @Transactional
     public void processWebhook(PagBankWebhookDto payload) {
 
         log.info("WEBHOOK RECEBIDO | reference_id={} status={}",
                 payload.getReferenceId(), payload.getStatus());
 
-        // Busca order interna
-        Order order = orderRepository.findById(Long.valueOf(payload.getReferenceId()))
-                .orElseThrow(() ->
-                        new NotFoundException("Order not found " + payload.getReferenceId()));
+        Long orderId = Long.valueOf(payload.getReferenceId());
 
-        // Recupera ou cria o Payment associado
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
+
         Payment payment = order.getPayment();
         if (payment == null) {
             payment = new Payment();
             payment.setOrder(order);
             payment.setAmount(order.getTotalAmount());
+            payment.setStatus(PaymentStatus.PENDING);
             order.setPayment(payment);
         }
 
         // Consulta status atualizado no PagBank
-        PagBankOrderResponseDto pagBankResponse =
-                pagBankClient.getPaymentStatus(payload.getId());
+        PagBankOrderResponseDto pg = pagBankClient.getPaymentStatus(payload.getId());
 
-        String externalStatus = pagBankResponse.getStatus() != null
-                ? pagBankResponse.getStatus().toUpperCase()
-                : (payload.getStatus() != null ? payload.getStatus().toUpperCase() : "UNKNOWN");
+        String externalStatus = pg.getStatus() != null
+                ? pg.getStatus().toUpperCase()
+                : payload.getStatus().toUpperCase();
 
-        log.info("STATUS DO PAGBANK PARA ORDER {} = {}", order.getId(), externalStatus);
+        log.info("STATUS DO PAGBANK PARA ORDER {} = {}", orderId, externalStatus);
 
-
-        // Mapeamento de status
         switch (externalStatus) {
             case "PAID" -> {
                 payment.setStatus(PaymentStatus.PAID);
                 payment.setPaidAt(LocalDateTime.now());
-                log.info("PAGAMENTO CONFIRMADO PARA ORDER {}", order.getId());
             }
             case "WAITING_PAYMENT", "CREATED" -> {
                 payment.setStatus(PaymentStatus.PENDING);
-                log.info("PAGAMENTO PENDENTE PARA ORDER {}", order.getId());
+                payment.setPaidAt(null);
             }
             case "EXPIRED" -> {
                 payment.setStatus(PaymentStatus.EXPIRED);
-                log.warn("PAGAMENTO EXPIRADO PARA ORDER {}", order.getId());
+                payment.setPaidAt(null);
             }
             case "CANCELED", "REFUSED" -> {
                 payment.setStatus(PaymentStatus.FAILED);
-                log.warn("PAGAMENTO CANCELADO/RECUSADO PARA ORDER {}", order.getId());
+                payment.setPaidAt(null);
             }
             default -> log.warn("STATUS NÃO MAPEADO: {}", externalStatus);
         }
 
-        // Salva order + payment (Cascade.ALL)
         orderRepository.save(order);
 
-        log.info("PAYMENT ATUALIZADO | order={} status={}",
-                order.getId(), payment.getStatus());
+        log.info("PAYMENT ATUALIZADO | order={} status={}", orderId, payment.getStatus());
     }
-
 }

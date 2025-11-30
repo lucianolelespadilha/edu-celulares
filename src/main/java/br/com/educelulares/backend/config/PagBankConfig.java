@@ -8,45 +8,63 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.web.reactive.function.client.WebClient;
 
 
-// -----------------------------------------------------------------------------
-// CONFIGURAÇÃO DO CLIENTE HTTP (WEBCLIENT) PARA COMUNICAÇÃO COM A API PAGBANK
-// ESTA CLASSE CARREGA AS CREDENCIAIS DO ARQUIVO application.properties
-// E EXPÕE UM BEAN QUE PODE SER INJETADO EM QUALQUER SERVICE
+/// -----------------------------------------------------------------------------
+// CONFIGURAÇÃO DO WEBCLIENT PARA INTEGRAÇÃO COM A API DO PAGBANK
+// ESTA CLASSE LÊ AS CREDENCIAIS DO ARQUIVO application.properties
+// E EXPÕE UM BEAN WebClient PRONTO PARA USO EM QUALQUER SERVICE.
 // -----------------------------------------------------------------------------
 @Configuration
 public class PagBankConfig {
 
     // -------------------------------------------------------------------------
-    // URL BASE DA API PAGBANK (SANDBOX OU PRODUÇÃO)
-    // CARREGADA AUTOMATICAMENTE DO application.properties
+    // URL BASE DO PAGBANK (SANDBOX OU PRODUÇÃO)
+    // EXEMPLO (SANDBOX): https://sandbox.api.pagseguro.com
     // -------------------------------------------------------------------------
     @Value("${pagbank.base-url}")
     private String baseUrl;
 
     // -------------------------------------------------------------------------
-    // CLIENT ID DO PAGBANK
-    // IDENTIFICA SUA APLICAÇÃO DENTRO DO PAGBANK
+    // APP ID DO SANDBOX DO PAGBANK
+    // FORNECIDO AUTOMATICAMENTE PELO PAINEL SANDBOX
+    // É ENVIADO NO HEADER x-client-id
     // -------------------------------------------------------------------------
-    @Value("${pagbank.client-id}")
-    private String clientId;
+    @Value("${pagbank.app-id}")
+    private String appId;
 
     // -------------------------------------------------------------------------
-    // CLIENT SECRET DO PAGBANK
-    // UTILIZADO PARA AUTENTICAÇÃO NAS REQUISIÇÕES
+    // APP KEY DO SANDBOX DO PAGBANK
+    // USADO COMO TOKEN DE AUTENTICAÇÃO NO HEADER Authorization: Bearer
     // -------------------------------------------------------------------------
-    @Value("${pagbank.client-secret}")
-    private String clientSecret;
+    @Value("${pagbank.app-key}")
+    private String appKey;
 
     // -------------------------------------------------------------------------
-    // CRIA E CONFIGURA O WEBCLIENT QUE SERÁ UTILIZADO PARA CHAMAR A API PAGBANK
-    // DEFINIÇÃO DO CONTENT-TYPE COMO JSON E DEFINIÇÃO DA BASE URL
-    // ESTE WEBCLIENT SERÁ INJETADO EM SERVIÇOS COMO: PagBankService
+    // BEAN WEBCLIENT
+    // CONFIGURADO COM:
+    // 1. BASE URL DO PAGBANK
+    // 2. CONTENT-TYPE APPLICATION/JSON
+    // 3. AUTENTICAÇÃO OBRIGATÓRIA:
+    //      - x-client-id: APP ID
+    //      - Authorization: Bearer APP KEY
+    //
+    // OBS: SEM ESSES HEADERS, TODAS AS REQUISIÇÕES RETORNAM 401
     // -------------------------------------------------------------------------
     @Bean
     public WebClient pagBankWebClient() {
+
         return WebClient.builder()
+                // URL raiz da API PagBank
                 .baseUrl(baseUrl)
+
+                // Informando que o conteúdo enviado/recebido é JSON
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
+
+                // Header obrigatório reconhecido pelo PagBank
+                .defaultHeader("x-client-id", appId)
+
+                // Token de autenticação (APP KEY)
+                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + appKey)
+
                 .build();
     }
 }

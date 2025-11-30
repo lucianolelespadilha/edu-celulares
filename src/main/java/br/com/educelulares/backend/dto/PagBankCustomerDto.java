@@ -1,8 +1,10 @@
 package br.com.educelulares.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,6 +34,15 @@ public class PagBankCustomerDto {
     // -------------------------------------------------------------------------
     @NotBlank
     private String email;
+
+    @JsonProperty("tax_id")
+    @NotBlank(message = "O campo tax_id é obrigatório para o PagBank.")
+    @Pattern(
+            regexp = "\\d{11}|\\d{14}",
+            message = "O tax_id deve conter 11 (CPF) ou 14 dígitos (CNPJ), apenas números."
+    )
+    private String cpf;
+
 
     // -------------------------------------------------------------------------
     // TELEFONE DO CLIENTE

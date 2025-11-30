@@ -33,14 +33,14 @@ public class CustomerService {
         Customer saved = customerRepository.save(customer);
 
         // RETORNA UM DTO DE SAÍDA COM OS DADOS PERSISTIDOS
-        return new CustomerDto(saved.getId(), saved.getName(), saved.getEmail());
+        return new CustomerDto(saved.getId(), saved.getName(), saved.getCpf() ,saved.getEmail());
     }
     // ---------------------------------------------------------------------
     // LISTA TODOS OS CLIENTES CADASTRADOS
     // ---------------------------------------------------------------------
     public List<CustomerDto> findAll() {
         return customerRepository.findAll().stream()
-                .map(c-> new CustomerDto(c.getId(),c.getName(),c.getEmail()))
+                .map(c-> new CustomerDto(c.getId(),c.getName(),c.getCpf(),c.getEmail()))
                 .collect(Collectors.toList());
     }
     // ---------------------------------------------------------------------
@@ -49,7 +49,7 @@ public class CustomerService {
     public CustomerDto findById(Long id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("Customer not found"));
-        return new CustomerDto(customer.getId(), customer.getName(), customer.getEmail());
+        return new CustomerDto(customer.getId(), customer.getName(), customer.getCpf(), customer.getEmail());
     }
 
     // ---------------------------------------------------------------------
@@ -61,7 +61,7 @@ public class CustomerService {
         customer.setName(customerCreateDto.name());
         customer.setEmail(customerCreateDto.email());
         Customer updatedCustomer = customerRepository.save(customer);
-        return new CustomerDto(updatedCustomer.getId(), updatedCustomer.getName(), updatedCustomer.getEmail());
+        return new CustomerDto(updatedCustomer.getId(), updatedCustomer.getName(),updatedCustomer.getEmail(),updatedCustomer.getCpf());
     }
 
     // ---------------------------------------------------------------------

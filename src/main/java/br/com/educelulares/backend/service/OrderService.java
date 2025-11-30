@@ -46,12 +46,12 @@ public class OrderService {
     public OrderDto createOrder(OrderCreateDto orderCreateDto) {
 
         // VERIFICA SE O ID DO CLIENTE FOI INFORMADO
-        if (orderCreateDto.costumerId() == null) {
+        if (orderCreateDto.customerId() == null) {
             throw new BadRequestException("CUSTOMER ID IS REQUIRED");
         }
 
         // BUSCA O CLIENTE NO BANCO DE DADOS OU LANÇA EXCEÇÃO CASO NÃO ENCONTRADO
-        Customer customer = customerRepository.findById(orderCreateDto.costumerId())
+        Customer customer = customerRepository.findById(orderCreateDto.customerId())
                 .orElseThrow(() -> new NotFoundException("CUSTOMER NOT FOUND"));
 
         // CRIA UM NOVO PEDIDO E DEFINE O CLIENTE

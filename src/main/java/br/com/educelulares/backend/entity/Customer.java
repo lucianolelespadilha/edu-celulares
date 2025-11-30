@@ -23,6 +23,9 @@ public class Customer {
     private String name;
     private String email;
 
+    @Column(name = "tax_id", length = 20)
+    private String cpf;
+
     @OneToMany(mappedBy = "customer" )
     @JsonManagedReference
     private List<Order> orders = new ArrayList<>();
