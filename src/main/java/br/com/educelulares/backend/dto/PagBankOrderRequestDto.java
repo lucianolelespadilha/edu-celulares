@@ -1,5 +1,6 @@
 package br.com.educelulares.backend.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -12,11 +13,10 @@ import lombok.Setter;
 
 import java.util.List;
 
-// -----------------------------------------------------------------------------
-// DTO PRINCIPAL UTILIZADO PARA ENVIAR UM PEDIDO (ORDER) AO PAGBANK.
-// ESTE OBJETO REPRESENTA EXATAMENTE A ESTRUTURA ESPERADA PELA API DE ORDERS.
-// AQUI REUNIMOS: REFERÊNCIA DO PEDIDO, CLIENTE, ITENS, FRETE E WEBHOOK.
-// -----------------------------------------------------------------------------
+/**
+ * DTO PRINCIPAL ENVIADO PARA O PAGBANK PARA CRIAR UMA ORDEM PIX.
+ * CONTÉM REFERÊNCIA INTERNA, CLIENTE, ITENS, ENTREGA E URLs DE NOTIFICAÇÃO.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -24,22 +24,22 @@ import java.util.List;
 public class PagBankOrderRequestDto {
 
     // -------------------------------------------------------------------------
-    // IDENTIFICADOR ÚNICO DO PEDIDO NO SEU SISTEMA
-    // NÃO PODE SER NULO OU VAZIO
+    // ID DO PEDIDO NA SUA APLICAÇÃO
+    // MAPEADO CORRETAMENTE PARA reference_id NO JSON
     // -------------------------------------------------------------------------
     @NotBlank(message = "reference_id is required")
-    private String reference_Id;
+    @JsonProperty("reference_id")
+    private String referenceId;
 
     // -------------------------------------------------------------------------
-    // INFORMAÇÕES DO CLIENTE
-    // NECESSÁRIO PARA GERAÇÃO DO PEDIDO
+    // DADOS DO CLIENTE: NOME, EMAIL, TELEFONE, CPF
     // -------------------------------------------------------------------------
     @NotNull(message = "customer is required")
     @Valid
     private PagBankCustomerDto customer;
 
     // -------------------------------------------------------------------------
-    // LISTA DE ITENS - NÃO PODE SER VAZIA
+    // LISTA DOS ITENS DO PEDIDO
     // -------------------------------------------------------------------------
     @NotNull(message = "items list cannot be null")
     @Size(min = 1, message = "order must contain at least 1 item")
@@ -47,21 +47,23 @@ public class PagBankOrderRequestDto {
     private List<PagBankItemDto> items;
 
     // -------------------------------------------------------------------------
-    // INFORMAÇÕES DE ENTREGA - ENDEREÇO + VALOR
+    // DADOS DE ENTREGA (ENDEREÇO + VALOR)
     // -------------------------------------------------------------------------
     @NotNull(message = "shipping info is required")
     @Valid
     private PagBankShippingDto shipping;
 
     // -------------------------------------------------------------------------
-    // URLS DE NOTIFICAÇÃO DO PAGBANK
+    // URL QUE O PAGBANK VAI USAR PARA ENVIAR WEBHOOKS
+    // DEVE SER ENVIADA EXATAMENTE COMO notification_urls NO JSON
     // -------------------------------------------------------------------------
     @NotNull(message = "notification_urls cannot be null")
     @Size(min = 1, message = "at least one notification URL must be provided")
+    @JsonProperty("notification_urls")
     private List<
             @Pattern(
                     regexp = "https?://.*",
                     message = "each notification URL must be a valid http/https address"
             )
-                    String> notification_urls;
+                    String> notificationUrls;
 }

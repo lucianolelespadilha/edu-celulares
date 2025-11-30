@@ -28,19 +28,20 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setName(customerCreateDto.name());
         customer.setEmail(customerCreateDto.email());
+        customer.setCpf(customerCreateDto.cpf());
 
         // SALVA O CLIENTE NO BANCO DE DADOS
         Customer saved = customerRepository.save(customer);
 
         // RETORNA UM DTO DE SAÍDA COM OS DADOS PERSISTIDOS
-        return new CustomerDto(saved.getId(), saved.getName(), saved.getCpf() ,saved.getEmail());
+        return new CustomerDto(saved.getId(), saved.getName(),saved.getEmail(), saved.getCpf() );
     }
     // ---------------------------------------------------------------------
     // LISTA TODOS OS CLIENTES CADASTRADOS
     // ---------------------------------------------------------------------
     public List<CustomerDto> findAll() {
         return customerRepository.findAll().stream()
-                .map(c-> new CustomerDto(c.getId(),c.getName(),c.getCpf(),c.getEmail()))
+                .map(c-> new CustomerDto(c.getId(),c.getName(),c.getEmail(),c.getCpf()))
                 .collect(Collectors.toList());
     }
     // ---------------------------------------------------------------------
@@ -49,7 +50,7 @@ public class CustomerService {
     public CustomerDto findById(Long id) {
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(()-> new NotFoundException("Customer not found"));
-        return new CustomerDto(customer.getId(), customer.getName(), customer.getCpf(), customer.getEmail());
+        return new CustomerDto(customer.getId(), customer.getName(),customer.getEmail(), customer.getCpf());
     }
 
     // ---------------------------------------------------------------------
@@ -60,8 +61,9 @@ public class CustomerService {
                 .orElseThrow(()-> new NotFoundException("Customer not found"));
         customer.setName(customerCreateDto.name());
         customer.setEmail(customerCreateDto.email());
+        customer.setCpf(customerCreateDto.cpf());
         Customer updatedCustomer = customerRepository.save(customer);
-        return new CustomerDto(updatedCustomer.getId(), updatedCustomer.getName(),updatedCustomer.getEmail(),updatedCustomer.getCpf());
+        return new CustomerDto(updatedCustomer.getId(), updatedCustomer.getName(), updatedCustomer.getEmail(), updatedCustomer.getCpf());
     }
 
     // ---------------------------------------------------------------------

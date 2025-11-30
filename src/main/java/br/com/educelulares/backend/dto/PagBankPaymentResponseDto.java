@@ -28,7 +28,7 @@ public class PagBankPaymentResponseDto {
 
     // QR CODE GERADO (PODE SER NULO EM ALGUNS TIPOS DE COBRANÇA)
     @Valid
-    private PagBankQRCodeDto qr_code;
+    private PagBankQrCodeDto qr_code;
 
     // LINK DE PAGAMENTO (PODE SER NULO EM PIX)
     @Valid
