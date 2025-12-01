@@ -18,6 +18,19 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * ============================================================================
+ * SERVIÇO RESPONSÁVEL PELO FLUXO DE PAGAMENTO VIA PAGBANK (PIX).
+ *
+ * FUNÇÕES:
+ *  1) CRIAR ORDEM PIX
+ *  2) CONSULTAR STATUS
+ *  3) PROCESSAR WEBHOOK DO PAGBANK
+ *
+ * TODA A COMUNICAÇÃO HTTP FICA NO PagBankClient.
+ * ESTE SERVICE SOMENTE MONTA OS DTOs E ATUALIZA O DOMÍNIO.
+ * ============================================================================
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,19 +40,22 @@ public class PagBankService {
     private final PagBankClient pagBankClient;
 
     // =========================================================================
-    // 1. CRIA ORDEM PIX NO PAGBANK
+    // 1. CRIA UMA ORDEM PIX NO PAGBANK
     // =========================================================================
     @Transactional
     public PagBankOrderResponseDto createPaymentPix(Long orderId) {
 
         log.info("CRIANDO PAGAMENTO PIX PARA ORDER {}", orderId);
 
+        // ---------------------------------------------------------------------
+        // BUSCA A ORDEM NO BANCO
+        // ---------------------------------------------------------------------
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
 
-        // ====================================================
+        // ---------------------------------------------------------------------
         // VALIDAÇÃO DO CLIENTE
-        // ====================================================
+        // ---------------------------------------------------------------------
         Customer c = order.getCustomer();
         if (c == null) {
             throw new BadRequestException("A ordem não possui cliente associado.");
@@ -49,9 +65,9 @@ public class PagBankService {
             throw new BadRequestException("CPF/CNPJ do cliente é obrigatório para criar pagamento PIX.");
         }
 
-        // ====================================================
-        // MONTA ITENS
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // MONTA ITENS PARA O PAGBANK
+        // ---------------------------------------------------------------------
         List<PagBankItemDto> items = order.getItems().stream()
                 .map(item -> new PagBankItemDto(
                         item.getProduct().getName(),
@@ -60,23 +76,26 @@ public class PagBankService {
                 ))
                 .toList();
 
+        // ---------------------------------------------------------------------
+        // CALCULA VALOR TOTAL DA ORDEM
+        // ---------------------------------------------------------------------
         int totalAmount = order.getItems().stream()
                 .map(i -> i.getPrice().multiply(BigDecimal.valueOf(i.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .intValue();
 
-        // ====================================================
-        // MONTA TELEFONE DO CLIENTE (usar dados reais se existirem)
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // MONTA TELEFONE (AJUSTE CONFORME NECESSÁRIO)
+        // ---------------------------------------------------------------------
         PagBankPhoneDto phone = new PagBankPhoneDto(
                 "55",
                 "11",
                 "999999999"
         );
 
-        // ====================================================
-        // MONTA CLIENTE PARA O PAGBANK (cpf vira tax_id no JSON)
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // MONTA DADOS DO CLIENTE PARA ENVIO AO PAGBANK
+        // ---------------------------------------------------------------------
         PagBankCustomerDto customerDto = new PagBankCustomerDto(
                 c.getName(),
                 c.getEmail(),
@@ -84,9 +103,9 @@ public class PagBankService {
                 phone
         );
 
-        // ====================================================
-        // ENDEREÇO E FRETE (fixo ou via Order)
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // ENDEREÇO DE ENTREGA
+        // ---------------------------------------------------------------------
         PagBankAddressDto address = new PagBankAddressDto(
                 "Test Street",
                 "123",
@@ -99,36 +118,52 @@ public class PagBankService {
                 "01001000"
         );
 
-        PagBankShippingDto shipping = new PagBankShippingDto(address, totalAmount);
+        // shipping.amount = frete
+        PagBankShippingDto shipping = new PagBankShippingDto(address, 0);
 
-        // ====================================================
-        // NOTIFICATION WEBHOOK
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // URL DE NOTIFICAÇÃO PARA O WEBHOOK
+        // ---------------------------------------------------------------------
         List<String> notifications = List.of(
                 "https://seusite.com/webhook/pagbank"
         );
 
-        // ====================================================
-        // MONTAGEM DO REQUEST AO PAGBANK
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // CHARGE DO PIX (OBRIGATÓRIA)
+        // CONTÉM:
+        //   amount.value = valor total
+        //   payment_method.type = PIX
+        // ---------------------------------------------------------------------
+        PagBankChargeRequestDto charge = new PagBankChargeRequestDto(
+                new PagBankChargeAmountRequestDto(totalAmount),
+                new PagBankPaymentMethodRequestDto("PIX")
+        );
+
+        // ---------------------------------------------------------------------
+        // MONTA DTO PRINCIPAL DA ORDEM
+        // ---------------------------------------------------------------------
         PagBankOrderRequestDto requestDto = new PagBankOrderRequestDto(
                 order.getId().toString(),
                 customerDto,
                 items,
                 shipping,
-                notifications
+                notifications,
+                List.of(charge)
         );
 
-        // ====================================================
-        // ENVIA REQUISIÇÃO PARA O PAGBANK
-        // ====================================================
+        log.info("ENVIANDO ORDEM PIX AO PAGBANK...");
+
+        // ---------------------------------------------------------------------
+        // ENVIA ORDEM PARA O PAGBANK
+        // ---------------------------------------------------------------------
         PagBankOrderResponseDto response = pagBankClient.createPixOrder(requestDto);
 
-        log.info("PIX GERADO PARA ORDER={} PAGBANK_ID={}", order.getId(), response.getId());
+        log.info("PIX CRIADO COM SUCESSO: PAGBANK_ID={} ORDER_ID={} STATUS={}",
+                response.getId(), order.getId(), response.getStatus());
 
-        // ====================================================
-        // CRIA O REGISTRO DE PAYMENT SE NÃO EXISTIR
-        // ====================================================
+        // ---------------------------------------------------------------------
+        // CRIA PAYMENT LOCAL SE NÃO EXISTIR
+        // ---------------------------------------------------------------------
         if (order.getPayment() == null) {
             Payment payment = new Payment();
             payment.setOrder(order);
@@ -143,16 +178,19 @@ public class PagBankService {
     }
 
     // =========================================================================
-    // 2. PROCESSA WEBHOOK PAGBANK
+    // 2. PROCESSA O WEBHOOK DO PAGBANK
     // =========================================================================
     @Transactional
     public void processWebhook(PagBankWebhookDto payload) {
 
-        log.info("WEBHOOK RECEBIDO | reference_id={} status={}",
+        log.info("WEBHOOK RECEBIDO DO PAGBANK | reference_id={}  status={}",
                 payload.getReferenceId(), payload.getStatus());
 
         Long orderId = Long.valueOf(payload.getReferenceId());
 
+        // ---------------------------------------------------------------------
+        // BUSCA ORDER
+        // ---------------------------------------------------------------------
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new NotFoundException("Order not found: " + orderId));
 
@@ -165,15 +203,20 @@ public class PagBankService {
             order.setPayment(payment);
         }
 
-        // Consulta status atualizado no PagBank
+        // ---------------------------------------------------------------------
+        // CONSULTA STATUS NO PAGBANK
+        // ---------------------------------------------------------------------
         PagBankOrderResponseDto pg = pagBankClient.getPaymentStatus(payload.getId());
 
         String externalStatus = pg.getStatus() != null
                 ? pg.getStatus().toUpperCase()
                 : payload.getStatus().toUpperCase();
 
-        log.info("STATUS DO PAGBANK PARA ORDER {} = {}", orderId, externalStatus);
+        log.info("STATUS ATUAL DO PAGBANK PARA ORDER {} = {}", orderId, externalStatus);
 
+        // ---------------------------------------------------------------------
+        // TRATAMENTO DOS STATUS
+        // ---------------------------------------------------------------------
         switch (externalStatus) {
             case "PAID" -> {
                 payment.setStatus(PaymentStatus.PAID);
@@ -191,11 +234,13 @@ public class PagBankService {
                 payment.setStatus(PaymentStatus.FAILED);
                 payment.setPaidAt(null);
             }
-            default -> log.warn("STATUS NÃO MAPEADO: {}", externalStatus);
+            default ->
+                    log.warn("STATUS DO PAGBANK NÃO MAPEADO: {}", externalStatus);
         }
 
         orderRepository.save(order);
 
-        log.info("PAYMENT ATUALIZADO | order={} status={}", orderId, payment.getStatus());
+        log.info("PAYMENT ATUALIZADO COM SUCESSO | ORDER={} STATUS={}",
+                orderId, payment.getStatus());
     }
 }

@@ -8,13 +8,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * REPRESENTA UMA COBRANÇA (CHARGE) RETORNADA PELO PAGBANK.
- *
- * CADA ORDEM PODE CONTER UMA OU MAIS "CHARGES".
- * EM PAGAMENTOS PIX, É AQUI QUE VEM:
- *  - O TIPO DE PAGAMENTO (PIX)
- *  - O QR CODE
- *  - A IMAGEM BASE64 DO QR CODE
+ * ============================================================================
+ * DTO DE RESPOSTA DAS "CHARGES".
+ * AQUI VEM O QR CODE DO PIX.
+ * ============================================================================
  */
 @Getter
 @Setter
@@ -22,10 +19,6 @@ import lombok.Setter;
 @AllArgsConstructor
 public class PagBankChargeResponseDto {
 
-    // -------------------------------------------------------------------------
-    // MÉTODO DE PAGAMENTO DA CHARGE (PIX)
-    // CONTÉM O QR CODE E O TYPE
-    // -------------------------------------------------------------------------
     @JsonProperty("payment_method")
     @Valid
     private PagBankPaymentMethodDto paymentMethod;
