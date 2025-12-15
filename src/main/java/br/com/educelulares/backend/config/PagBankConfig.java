@@ -1,70 +1,51 @@
 package br.com.educelulares.backend.config;
 
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
-import org.springframework.http.HttpHeaders;
+import org.springframework.web.reactive.function.client.ClientRequest;
+import org.springframework.web.reactive.function.client.ExchangeFilterFunction;
 import org.springframework.web.reactive.function.client.WebClient;
 
-
-/// -----------------------------------------------------------------------------
-// CONFIGURAÇÃO DO WEBCLIENT PARA INTEGRAÇÃO COM A API DO PAGBANK
-// ESTA CLASSE LÊ AS CREDENCIAIS DO ARQUIVO application.properties
-// E EXPÕE UM BEAN WebClient PRONTO PARA USO EM QUALQUER SERVICE.
-// -----------------------------------------------------------------------------
+@Slf4j
 @Configuration
+@RequiredArgsConstructor
 public class PagBankConfig {
 
-    // -------------------------------------------------------------------------
-    // URL BASE DO PAGBANK (SANDBOX OU PRODUÇÃO)
-    // EXEMPLO (SANDBOX): https://sandbox.api.pagseguro.com
-    // -------------------------------------------------------------------------
     @Value("${pagbank.base-url}")
     private String baseUrl;
 
-    // -------------------------------------------------------------------------
-    // APP ID DO SANDBOX DO PAGBANK
-    // FORNECIDO AUTOMATICAMENTE PELO PAINEL SANDBOX
-    // É ENVIADO NO HEADER x-client-id
-    // -------------------------------------------------------------------------
-    @Value("${pagbank.app-id}")
-    private String appId;
-
-    // -------------------------------------------------------------------------
-    // APP KEY DO SANDBOX DO PAGBANK
-    // USADO COMO TOKEN DE AUTENTICAÇÃO NO HEADER Authorization: Bearer
-    // -------------------------------------------------------------------------
+    // ALTERAÇÃO IMPORTANTE AQUI ↓↓↓
     @Value("${pagbank.app-key}")
-    private String appKey;
+    private String token;
 
-    // -------------------------------------------------------------------------
-    // BEAN WEBCLIENT
-    // CONFIGURADO COM:
-    // 1. BASE URL DO PAGBANK
-    // 2. CONTENT-TYPE APPLICATION/JSON
-    // 3. AUTENTICAÇÃO OBRIGATÓRIA:
-    //      - x-client-id: APP ID
-    //      - Authorization: Bearer APP KEY
-    //
-    // OBS: SEM ESSES HEADERS, TODAS AS REQUISIÇÕES RETORNAM 401
-    // -------------------------------------------------------------------------
+    @PostConstruct
+    public void debug() {
+        log.info("===== PAGBANK CONFIG =====");
+        log.info("BASE URL = {}", baseUrl);
+        log.info("TOKEN    = {}", (token != null && token.length() > 5) ? "OK" : "VAZIO");
+        log.info("==========================");
+    }
+
     @Bean
-    public WebClient pagBankWebClient() {
+    public WebClient pagBankWebClient(WebClient.Builder builder) {
 
-        return WebClient.builder()
-                // URL raiz da API PagBank
+        ExchangeFilterFunction authFilter = ExchangeFilterFunction.ofRequestProcessor(request -> {
+            ClientRequest newReq = ClientRequest.from(request)
+                    .header("Authorization", "Bearer " + token)
+                    .header("Accept", MediaType.APPLICATION_JSON_VALUE)
+                    .header("Content-Type", MediaType.APPLICATION_JSON_VALUE)
+                    .build();
+            return reactor.core.publisher.Mono.just(newReq);
+        });
+
+        return builder
                 .baseUrl(baseUrl)
-
-                // Informando que o conteúdo enviado/recebido é JSON
-                .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
-
-                // Header obrigatório reconhecido pelo PagBank
-                .defaultHeader("x-client-id", appId)
-
-                // Token de autenticação (APP KEY)
-                .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + appKey)
-
+                .filter(authFilter)
                 .build();
     }
 }

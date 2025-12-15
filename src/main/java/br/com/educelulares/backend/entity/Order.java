@@ -7,7 +7,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.springframework.boot.autoconfigure.web.WebProperties;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -39,19 +38,33 @@ public class Order {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // ==========================================================
+    // NOVO CAMPO → ID DA ORDEM NO PAGBANK
+    // Exemplo: ORDE_2CFE2288-79BF-49D7-B71D-D81689E743E8
+    // ==========================================================
+    @Column(name = "pagbank_order_id")
+    private String pagbankOrderId;
+
+    // ==========================================================
+    // NOVO CAMPO → STATUS DO PAGAMENTO NO PAGBANK
+    // Exemplo: "PAID", "WAITING_PAYMENT", "CANCELED"
+    // ==========================================================
+    @Column(name = "pagbank_status")
+    private String pagbankStatus;
+
+    // ==========================================================
+    // TOTAL DA ORDEM
+    // ==========================================================
     public BigDecimal getTotalAmount() {
-         if(items == null|| items.isEmpty() ){
-             return BigDecimal.ZERO;
-         }
+        if (items == null || items.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
 
-         return items.stream()
-                 .map(item->
-                                 item.getPrice().multiply(
-                                         BigDecimal.valueOf(item.getQuantity())
-                 )
-                 )
-                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
+        return items.stream()
+                .map(item ->
+                        item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity()))
+                )
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
 }
+
